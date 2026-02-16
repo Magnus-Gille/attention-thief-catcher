@@ -13,6 +13,7 @@ Self-review catches obvious issues but misses blind spots. By having one model d
 | 2026-02-16 | [Security](security-summary.md) | 2 | Fix log permissions (0700/0600), add symlink check, redirect stdout/stderr from /tmp | 11 | 4/11 (36%) |
 | 2026-02-16 | [Usability](usability-summary.md) | 2 | Display process snapshots in analyzer output, fix silent LogWriter failure, add install prerequisites | 24 | 9/24 (38%) |
 | 2026-02-16 | [Big picture](bigpicture-summary.md) | 2 | Reframe README: tool narrows suspects, doesn't definitively catch them; fix App Nap risk | 16 | 5/16 (31%) |
+| 2026-02-16 | [Roadmap](roadmap-summary.md) | 2 | Priority: SPM migration, status script, --follow mode, NSRunningApplication, AX prototype gate | 23 | 7/23 (30%) |
 
 **Start with the summaries** — they contain the final agreed findings, action items, and unresolved disagreements. The full debate chain is available if you want to see how conclusions were reached.
 

@@ -1,0 +1,209 @@
+[
+  {
+    "id": "roadmap-C01",
+    "source": "codex-round-1",
+    "text": "P1: Security argument overstated — /bin/ps is invoked via Process() with fixed args, not a shell",
+    "classification": "valid",
+    "impact": "changed",
+    "severity": "major",
+    "caught_by_self_review": false
+  },
+  {
+    "id": "roadmap-C02",
+    "source": "codex-round-1",
+    "text": "P1: Complexity estimate understated — analyzer code (analyze.py:136-143) breaks on format change, README needs update",
+    "classification": "valid",
+    "impact": "changed",
+    "severity": "major",
+    "caught_by_self_review": false
+  },
+  {
+    "id": "roadmap-C03",
+    "source": "codex-round-1",
+    "text": "P1: Schema migration for existing logs not addressed — 30-day mixed-format window",
+    "classification": "valid",
+    "impact": "changed",
+    "severity": "major",
+    "caught_by_self_review": false
+  },
+  {
+    "id": "roadmap-C04",
+    "source": "codex-round-1",
+    "text": "P1: 'No downside' claim is false — loss of non-app processes and CPU/MEM data",
+    "classification": "valid",
+    "impact": "changed",
+    "severity": "minor",
+    "caught_by_self_review": true
+  },
+  {
+    "id": "roadmap-C05",
+    "source": "codex-round-1",
+    "text": "P1: Consider libproc/sysctl as alternative to NSRunningApplication",
+    "classification": "invalid",
+    "impact": "rejected",
+    "severity": "minor",
+    "caught_by_self_review": false
+  },
+  {
+    "id": "roadmap-C06",
+    "source": "codex-round-1",
+    "text": "P2: Analyzer architecture is batch-oriented; --follow needs parallel execution path, not a small add-on",
+    "classification": "valid",
+    "impact": "changed",
+    "severity": "major",
+    "caught_by_self_review": false
+  },
+  {
+    "id": "roadmap-C07",
+    "source": "codex-round-1",
+    "text": "P2: Log rotation handling is non-trivial due to size-based rotation with local-time filenames",
+    "classification": "valid",
+    "impact": "changed",
+    "severity": "major",
+    "caught_by_self_review": false
+  },
+  {
+    "id": "roadmap-C08",
+    "source": "codex-round-1",
+    "text": "P2: kqueue dismissal on portability grounds is weak for macOS-only tool",
+    "classification": "valid",
+    "impact": "changed",
+    "severity": "minor",
+    "caught_by_self_review": true
+  },
+  {
+    "id": "roadmap-C09",
+    "source": "codex-round-1",
+    "text": "P2: Consider --stream mode reading from stdin, let tail -F handle rotation",
+    "classification": "partially_valid",
+    "impact": "acknowledged",
+    "severity": "minor",
+    "caught_by_self_review": false
+  },
+  {
+    "id": "roadmap-C10",
+    "source": "codex-round-1",
+    "text": "P3: Comment-based consistency enforcement is inadequate for dual build paths",
+    "classification": "valid",
+    "impact": "changed",
+    "severity": "major",
+    "caught_by_self_review": true
+  },
+  {
+    "id": "roadmap-C11",
+    "source": "codex-round-1",
+    "text": "P3: SPM migration rejected too quickly — install.sh could call swift build -c release",
+    "classification": "valid",
+    "impact": "changed",
+    "severity": "major",
+    "caught_by_self_review": false
+  },
+  {
+    "id": "roadmap-C12",
+    "source": "codex-round-1",
+    "text": "P4: Bootstrap paradox — analyze.py exits if logs missing, but status is needed precisely then",
+    "classification": "valid",
+    "impact": "changed",
+    "severity": "critical",
+    "caught_by_self_review": true
+  },
+  {
+    "id": "roadmap-C13",
+    "source": "codex-round-1",
+    "text": "P4: LaunchAgent identity ambiguity (label vs plist filename) complicates status reliability",
+    "classification": "valid",
+    "impact": "acknowledged",
+    "severity": "minor",
+    "caught_by_self_review": false
+  },
+  {
+    "id": "roadmap-C14",
+    "source": "codex-round-1",
+    "text": "P4: Fixed 10-minute stale threshold false-alarms during sleep unless sleep state is considered",
+    "classification": "valid",
+    "impact": "changed",
+    "severity": "minor",
+    "caught_by_self_review": false
+  },
+  {
+    "id": "roadmap-C15",
+    "source": "codex-round-1",
+    "text": "P5: Blanket deferral ignores middle ground — window-change signal without titles",
+    "classification": "valid",
+    "impact": "changed",
+    "severity": "major",
+    "caught_by_self_review": true
+  },
+  {
+    "id": "roadmap-C16",
+    "source": "codex-round-1",
+    "text": "P5: Complexity claims (200+ lines, manual CFRelease) unsubstantiated",
+    "classification": "valid",
+    "impact": "changed",
+    "severity": "minor",
+    "caught_by_self_review": false
+  },
+  {
+    "id": "roadmap-C17",
+    "source": "codex-round-1",
+    "text": "Priority ordering presented as high confidence despite acknowledged low evidence",
+    "classification": "valid",
+    "impact": "changed",
+    "severity": "major",
+    "caught_by_self_review": true
+  },
+  {
+    "id": "roadmap-C18",
+    "source": "codex-round-1",
+    "text": "Periodic PROCESS_SNAPSHOT events are underutilized in analyzer — no dedicated section",
+    "classification": "valid",
+    "impact": "acknowledged",
+    "severity": "minor",
+    "caught_by_self_review": false
+  },
+  {
+    "id": "roadmap-C19",
+    "source": "codex-round-1",
+    "text": "Self-review points SC-06 and SC-07 are partly performative — admitted but not corrected in draft",
+    "classification": "valid",
+    "impact": "acknowledged",
+    "severity": "minor",
+    "caught_by_self_review": false
+  },
+  {
+    "id": "roadmap-C20",
+    "source": "codex-round-2",
+    "text": "P3 is priority #1 but has unresolved AppKit/SPM linking question",
+    "classification": "valid",
+    "impact": "acknowledged",
+    "severity": "minor",
+    "caught_by_self_review": false
+  },
+  {
+    "id": "roadmap-C21",
+    "source": "codex-round-2",
+    "text": "Testing/migration validation gates still under-specified for P1 and P3",
+    "classification": "valid",
+    "impact": "acknowledged",
+    "severity": "major",
+    "caught_by_self_review": true
+  },
+  {
+    "id": "roadmap-C22",
+    "source": "codex-round-2",
+    "text": "Sleep-aware staleness suppression can hide real daemon failures (false negatives)",
+    "classification": "valid",
+    "impact": "acknowledged",
+    "severity": "minor",
+    "caught_by_self_review": false
+  },
+  {
+    "id": "roadmap-C23",
+    "source": "codex-round-2",
+    "text": "P2 benefits from Package.swift is a weak dependency claim — P2 is Python-side work",
+    "classification": "valid",
+    "impact": "acknowledged",
+    "severity": "minor",
+    "caught_by_self_review": false
+  }
+]
