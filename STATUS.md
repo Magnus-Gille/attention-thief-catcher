@@ -38,15 +38,11 @@ Python 3 log analysis. Modes:
 - Swift code compiles clean with `swiftc -O` (verified 2026-02-03)
 - No dependencies beyond system frameworks (AppKit, Foundation)
 
-## NOT YET DONE
-- **Not deployed yet** — `./Scripts/install.sh` has not been run
-- **No git repo initialized**
-- **Not tested end-to-end** — needs: install, switch apps, check logs, run analyze.py
+## Deployment status
+- **Deployed** — installed and running via launchd (2026-02-16)
+- **Git repo initialized** — on `main` branch
+- **Collecting data** — logs writing to `~/Library/Logs/attention-thief-catcher/`
 
 ## Next steps
-1. Run `./Scripts/install.sh` to deploy
-2. Verify with: `launchctl print gui/$(id -u)/com.magnusgille.attention-thief-catcher.plist`
-3. Switch between apps, then check: `cat ~/Library/Logs/attention-thief-catcher/focus-*.ndjson | python3 -m json.tool`
-4. Run `python3 Scripts/analyze.py` to confirm analysis works
-5. Wait for the bug to reoccur, restart, then `python3 Scripts/analyze.py --anomalies`
-6. Optionally: `git init` and commit everything
+1. Wait for the bug to reoccur, then `python3 Scripts/analyze.py --anomalies`
+2. Use `--around` with the approximate timestamp to inspect surrounding events
