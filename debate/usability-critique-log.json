@@ -1,0 +1,275 @@
+{
+  "meta": {
+    "topic": "usability",
+    "date": "2026-02-16",
+    "participants": ["Claude Opus 4.6", "Codex (adversarial role)"],
+    "rounds": 2,
+    "project": "attention-thief-catcher"
+  },
+  "critiques": [
+    {
+      "id": "U-01",
+      "source": "claude-draft",
+      "title": "No prerequisite check for swiftc in install.sh",
+      "severity": "medium",
+      "file": "Scripts/install.sh",
+      "line": 16,
+      "description": "The install script runs swiftc without checking if it's available. On a stock macOS without Xcode or CLT, this fails with a cryptic 'command not found' error.",
+      "status": "accepted-with-context",
+      "resolution": "Valid but lower priority than Xcode license check (U-07). Still worth adding a prerequisite check."
+    },
+    {
+      "id": "U-02",
+      "source": "claude-draft",
+      "title": "No Homebrew installation option",
+      "severity": "low",
+      "file": null,
+      "line": null,
+      "description": "The tool requires git clone + script execution rather than brew install.",
+      "status": "downgraded",
+      "resolution": "Initially rated as major barrier; downgraded after critique. One extra step for target audience. Nice-to-have for adoption/discoverability."
+    },
+    {
+      "id": "U-03",
+      "source": "claude-draft",
+      "title": "Unbounded log growth with no retention policy",
+      "severity": "medium",
+      "file": "Sources/attention-thief-catcher.swift",
+      "line": 11,
+      "description": "Log files rotate at 50 MB but old files are never deleted. Over time, logs accumulate without bound.",
+      "status": "accepted-moderated",
+      "resolution": "Valid principle (set-and-forget tools should self-clean). Urgency overstated -- practical growth is ~2-4 MB/month. Still a real concern for long-running deployments."
+    },
+    {
+      "id": "U-04",
+      "source": "claude-draft",
+      "title": "No health check mechanism for the daemon",
+      "severity": "high",
+      "file": null,
+      "line": null,
+      "description": "No status script, no heartbeat log, no way to verify the daemon is alive and logging correctly.",
+      "status": "accepted",
+      "resolution": "Ranked #4 in revised priority list. A status.sh script or periodic heartbeat event would address this."
+    },
+    {
+      "id": "U-05",
+      "source": "claude-draft",
+      "title": "Silent log write failures when fileHandle is nil",
+      "severity": "high",
+      "file": "Sources/attention-thief-catcher.swift",
+      "line": 39,
+      "description": "LogWriter.write() silently drops events when fileHandle is nil. Combined with try? on line 16, the daemon can appear running but log nothing.",
+      "status": "accepted-sharpened",
+      "resolution": "Critique correctly pinpointed try? on line 16 as the root cause. Ranked #2 in revised priority."
+    },
+    {
+      "id": "U-06",
+      "source": "claude-draft",
+      "title": "No versioning, releases, or changelogs",
+      "severity": "medium",
+      "file": null,
+      "line": null,
+      "description": "No version string, no git tags, no GitHub releases, no CHANGELOG. Users cannot pin versions or report issues against specific releases.",
+      "status": "accepted",
+      "resolution": "Essential for any open source project. Minimum: add a version constant and git tags."
+    },
+    {
+      "id": "U-07",
+      "source": "codex-critique",
+      "title": "Xcode license agreement failure mode not handled",
+      "severity": "high",
+      "file": "Scripts/install.sh",
+      "line": 16,
+      "description": "On fresh Xcode installs, swiftc fails with 'Agreeing to the Xcode/iOS license requires admin privileges' error. More common than swiftc-not-found.",
+      "status": "accepted",
+      "resolution": "New issue from critique. Install script should check for this condition. Part of broader prerequisite check improvement."
+    },
+    {
+      "id": "U-08",
+      "source": "codex-critique",
+      "title": "sed tilde expansion in install.sh is fragile",
+      "severity": "low",
+      "file": "Scripts/install.sh",
+      "line": 28,
+      "description": "The sed substitution for expanding ~ only handles one specific path pattern. Special characters in INSTALL_DIR would break it.",
+      "status": "accepted-low-priority",
+      "resolution": "Theoretically fragile but practically unlikely to fail with standard home directories. Should be noted but not prioritized."
+    },
+    {
+      "id": "U-09",
+      "source": "codex-critique",
+      "title": "try? on directory creation masks failures silently",
+      "severity": "high",
+      "file": "Sources/attention-thief-catcher.swift",
+      "line": 16,
+      "description": "try? FileManager.default.createDirectory silently ignores directory creation failures, leading to nil fileHandle and silent data loss.",
+      "status": "accepted",
+      "resolution": "Root cause of U-05. Should use try with proper error reporting."
+    },
+    {
+      "id": "U-10",
+      "source": "codex-critique",
+      "title": "Process snapshot captured but never displayed by analyzer",
+      "severity": "critical",
+      "file": "Scripts/analyze.py",
+      "line": "111-137",
+      "description": "Anomaly events include processSnapshot data (captured at swift:159-164) but analyze_anomalies() never displays it. The most valuable forensic data is hidden.",
+      "status": "accepted",
+      "resolution": "Consensus #1 usability fix. ~10 lines to add to analyze_anomalies(). Broken feature, not missing feature."
+    },
+    {
+      "id": "U-11",
+      "source": "codex-critique",
+      "title": "Histogram bar capped at 50 characters, visually misleading",
+      "severity": "low",
+      "file": "Scripts/analyze.py",
+      "line": 157,
+      "description": "The # histogram bars are capped at 50 chars regardless of count. An app with 51 activations looks identical to one with 5000.",
+      "status": "accepted-low-priority",
+      "resolution": "Minor visual issue. Should use proportional scaling or note the cap."
+    },
+    {
+      "id": "U-12",
+      "source": "codex-critique",
+      "title": "No color output in analyzer",
+      "severity": "low",
+      "file": "Scripts/analyze.py",
+      "line": null,
+      "description": "Plain text output with no ANSI color coding for different event types.",
+      "status": "accepted-with-caveats",
+      "resolution": "Nice-to-have but requires terminal detection for piping compatibility."
+    },
+    {
+      "id": "U-13",
+      "source": "codex-critique",
+      "title": "No relative timestamps in --last mode",
+      "severity": "medium",
+      "file": "Scripts/analyze.py",
+      "line": "318-319",
+      "description": "All timestamps are absolute ISO8601. In --last mode, relative times ('2 minutes ago') would be more intuitive.",
+      "status": "accepted",
+      "resolution": "Good UX improvement for the time-filtered analysis modes."
+    },
+    {
+      "id": "U-14",
+      "source": "codex-critique",
+      "title": "Privacy/security implications underdocumented",
+      "severity": "high",
+      "file": "README.md",
+      "line": null,
+      "description": "The daemon logs every app focus change and periodic ps output. No privacy section in README discussing data collection, storage, access control, or implications.",
+      "status": "accepted-upgraded",
+      "resolution": "Initially listed as documentation gap; upgraded to high severity. Needs prominent README section."
+    },
+    {
+      "id": "U-15",
+      "source": "codex-critique",
+      "title": "No upgrade path or mechanism",
+      "severity": "medium",
+      "file": null,
+      "line": null,
+      "description": "No version check, no migration path, no documented upgrade procedure. Contradicted by daemon design (KeepAlive, auto-start) which implies long-lived usage.",
+      "status": "partially-accepted",
+      "resolution": "Valid for long-lived usage. Claude's 'temporary tool' defense weakened by the daemon's persistent design."
+    },
+    {
+      "id": "U-16",
+      "source": "codex-critique",
+      "title": "Contribution workflow impractical without Package.swift",
+      "severity": "high",
+      "file": null,
+      "line": null,
+      "description": "No Xcode project or Package.swift. Contributors must use text editors without IDE support. Adding Package.swift is ~15 lines for substantial improvement.",
+      "status": "accepted",
+      "resolution": "Negligible cost, significant benefit. Should be added."
+    },
+    {
+      "id": "U-17",
+      "source": "claude-draft",
+      "title": "No user-facing notifications for anomalies",
+      "severity": "medium",
+      "file": null,
+      "line": null,
+      "description": "Anomalies are silently logged with no macOS notification or alert. Users must actively run the analyzer.",
+      "status": "deferred",
+      "resolution": "Potentially scope creep per self-review. Design philosophy is passive logging. Valid user expectation but changes tool character."
+    },
+    {
+      "id": "U-18",
+      "source": "claude-draft",
+      "title": "No sample output or screenshots in README",
+      "severity": "medium",
+      "file": "README.md",
+      "line": null,
+      "description": "README describes analyzer output but doesn't show it. No screenshots, GIFs, or sample terminal output.",
+      "status": "accepted",
+      "resolution": "Standard open source practice. Sample output would significantly help evaluation."
+    },
+    {
+      "id": "U-19",
+      "source": "claude-draft",
+      "title": "No troubleshooting section in README",
+      "severity": "medium",
+      "file": "README.md",
+      "line": null,
+      "description": "No guidance on what to do when things go wrong -- daemon not starting, logs not appearing, compilation failures.",
+      "status": "accepted",
+      "resolution": "Should cover the top 3-5 failure scenarios."
+    },
+    {
+      "id": "U-20",
+      "source": "codex-rebuttal",
+      "title": "No real-time log following mode in analyzer",
+      "severity": "medium",
+      "file": "Scripts/analyze.py",
+      "line": null,
+      "description": "No --follow or --watch mode for live monitoring. Users investigating active focus theft must use workarounds like tail -f.",
+      "status": "accepted",
+      "resolution": "New issue from rebuttal. Natural expectation for a diagnostic tool."
+    },
+    {
+      "id": "U-21",
+      "source": "codex-rebuttal",
+      "title": "Plist stderr/stdout go to /tmp, lost on reboot",
+      "severity": "medium",
+      "file": "LaunchAgents/com.magnusgille.attention-thief-catcher.plist",
+      "line": "33-36",
+      "description": "StandardOutPath and StandardErrorPath point to /tmp/ which is cleared on macOS reboot. Daemon error diagnostics are lost across reboots.",
+      "status": "accepted",
+      "resolution": "New issue from rebuttal. Should point to ~/Library/Logs/attention-thief-catcher/ for persistence."
+    },
+    {
+      "id": "U-22",
+      "source": "claude-draft",
+      "title": "Naive datetime in analyze.py --last mode",
+      "severity": "low",
+      "file": "Scripts/analyze.py",
+      "line": 340,
+      "description": "datetime.now() returns naive datetime while log timestamps strip timezone info. Could produce confusing results if timezone changes.",
+      "status": "accepted-low-priority",
+      "resolution": "Self-review correctly noted this is theoretical. Low practical likelihood for primary use case."
+    },
+    {
+      "id": "U-23",
+      "source": "claude-draft",
+      "title": "No tests, CI, or contribution guidelines",
+      "severity": "medium",
+      "file": null,
+      "line": null,
+      "description": "Zero test coverage, no GitHub Actions, no CONTRIBUTING.md, no issue/PR templates.",
+      "status": "accepted",
+      "resolution": "Barrier to contributions and code quality confidence. Package.swift (U-16) would enable test infrastructure."
+    },
+    {
+      "id": "U-24",
+      "source": "codex-rebuttal",
+      "title": "Privacy comparison to shell history is misleading",
+      "severity": "medium",
+      "file": null,
+      "line": null,
+      "description": "Claude's hedge that logged data is 'not more sensitive than shell history' understates the privacy implications. Passive activity logging is more invasive than user-initiated command recording.",
+      "status": "accepted",
+      "resolution": "Rebuttal point accepted. Privacy section should not minimize the surveillance profile."
+    }
+  ]
+}

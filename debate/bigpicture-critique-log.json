@@ -1,0 +1,203 @@
+{
+  "debate": "bigpicture",
+  "date": "2026-02-16",
+  "participants": {
+    "drafter": "Claude Opus 4.6",
+    "critic": "Codex"
+  },
+  "rounds": 2,
+  "critiques": [
+    {
+      "id": "BP-1",
+      "round": 1,
+      "source": "codex-critique",
+      "title": "Cannot distinguish user-initiated vs. stolen focus changes",
+      "severity": "high",
+      "category": "fundamental-limitation",
+      "description": "NSWorkspace.didActivateApplicationNotification carries no reason code. The tool knows WHAT took focus but never WHY. Anomaly heuristics (RAPID_FOCUS, JUST_LAUNCHED_ACTIVATION) are proxies with non-trivial false positive rates. Cmd-Tab triggers RAPID_FOCUS; Spotlight launch triggers JUST_LAUNCHED_ACTIVATION.",
+      "file_references": ["Sources/attention-thief-catcher.swift:119-167", "Sources/attention-thief-catcher.swift:224-249"],
+      "resolution": "conceded",
+      "resolution_detail": "Revised position: tool narrows suspects rather than definitively identifying culprits. Requires human cross-referencing with experienced focus theft timestamps."
+    },
+    {
+      "id": "BP-2",
+      "round": 1,
+      "source": "codex-critique",
+      "title": "Process enumeration is actively dying on macOS",
+      "severity": "high",
+      "category": "platform-risk",
+      "description": "Apple has been restricting process visibility since macOS Mojave. The /bin/ps call (line 81-93) and the unsigned binary + LaunchAgent deployment model are increasingly at risk. Non-sandboxed, non-notarized LaunchAgents are the exact profile Apple is trying to eliminate.",
+      "file_references": ["Sources/attention-thief-catcher.swift:79-94", "Scripts/install.sh:16", "LaunchAgents/com.magnusgille.attention-thief-catcher.plist"],
+      "resolution": "partially-conceded",
+      "resolution_detail": "Replace /bin/ps with NSRunningApplication enumeration. Deployment model risk (unsigned LaunchAgent) acknowledged but not yet addressed."
+    },
+    {
+      "id": "BP-3",
+      "round": 1,
+      "source": "codex-critique",
+      "title": "Surveillance potential inadequately addressed",
+      "severity": "high",
+      "category": "ethics",
+      "description": "The tool logs every app activation with timestamps, sleep/wake cycles (presence detection), and periodic ps snapshots. Mitigations listed in draft (login credentials, well-known location) are effectively meaningless in enterprise/MDM contexts. The tool is a behavioral monitoring toolkit.",
+      "file_references": ["Sources/attention-thief-catcher.swift:224-249", "Sources/attention-thief-catcher.swift:251-281", "Sources/attention-thief-catcher.swift:358-376"],
+      "resolution": "partially-conceded",
+      "resolution_detail": "Add brief responsible-use disclaimer to README. Proportionate approach without being alarmist."
+    },
+    {
+      "id": "BP-4",
+      "round": 1,
+      "source": "codex-critique",
+      "title": "App Nap could degrade poll frequency",
+      "severity": "medium",
+      "category": "platform-risk",
+      "description": "Plist sets ProcessType: Background and Nice: 10, both inviting App Nap. macOS could throttle the 3-second polling timer to 30-60 second intervals, undermining the safety net.",
+      "file_references": ["LaunchAgents/com.magnusgille.attention-thief-catcher.plist:22-23"],
+      "resolution": "conceded",
+      "resolution_detail": "Change ProcessType from Background to Adaptive in the plist."
+    },
+    {
+      "id": "BP-5",
+      "round": 1,
+      "source": "codex-critique",
+      "title": "NDJSON inferior to SQLite for this use case",
+      "severity": "medium",
+      "category": "architecture",
+      "description": "NDJSON provides no indexing (analyzer reads ALL events into memory), no schema validation, no compression, and fragile timezone handling. SQLite would provide indexed queries, built-in retention, atomic writes, and automatic space reclamation.",
+      "file_references": ["Sources/attention-thief-catcher.swift:6-53", "Scripts/analyze.py:65-100"],
+      "resolution": "partially-conceded",
+      "resolution_detail": "NDJSON defensible for temporary diagnostic use (human-readable, tail-able, crash-resilient). SQLite would be right migration if tool becomes long-term. Internal consistency noted: cannot claim both permanence and temporary scope."
+    },
+    {
+      "id": "BP-6",
+      "round": 1,
+      "source": "codex-critique",
+      "title": "Edge cases (Spaces, Stage Manager, multi-monitor) are fundamental limitations",
+      "severity": "medium",
+      "category": "fundamental-limitation",
+      "description": "Space switches, Stage Manager stage activations, multi-monitor clicks, full-screen transitions, and modal dialogs all generate focus change events indistinguishable from focus theft. High false positive rate for multi-monitor users and Stage Manager users.",
+      "file_references": ["Sources/attention-thief-catcher.swift:119-167"],
+      "resolution": "partially-conceded",
+      "resolution_detail": "Acknowledged as fundamental limitations requiring documentation. Tool's value is in complete event log for forensic analysis, not in anomaly alerts alone."
+    },
+    {
+      "id": "BP-7",
+      "round": 1,
+      "source": "codex-critique",
+      "title": "No log retention policy creates unbounded growth",
+      "severity": "medium",
+      "category": "scalability",
+      "description": "Old log files accumulate forever. After 6+ months, log directory could exceed 1 GB. Analyzer reads ALL files, getting slower over time.",
+      "file_references": ["Sources/attention-thief-catcher.swift:6-53", "Scripts/analyze.py:72"],
+      "resolution": "conceded",
+      "resolution_detail": "Already identified in draft. Add retention policy (delete files older than 30 days) and --file flag on analyzer."
+    },
+    {
+      "id": "BP-8",
+      "round": 1,
+      "source": "codex-critique",
+      "title": "Project lifecycle question not directly answered",
+      "severity": "medium",
+      "category": "strategy",
+      "description": "STATUS.md names AltTab as prime suspect. If confirmed, the tool has served its purpose. Draft hints at lifecycle question but does not answer it.",
+      "file_references": ["STATUS.md:8"],
+      "resolution": "conceded",
+      "resolution_detail": "Direct answer: diagnostic tool, not a product. Remain as public resource but do not invest in community features unless demand materializes."
+    },
+    {
+      "id": "BP-9",
+      "round": 1,
+      "source": "codex-critique",
+      "title": "Competitive landscape understated",
+      "severity": "low",
+      "category": "positioning",
+      "description": "Hammerspoon, OverSight, Lingon, and macOS log stream all compete. Tool's differentiation is anomaly detection heuristics, not core monitoring.",
+      "file_references": [],
+      "resolution": "partially-conceded",
+      "resolution_detail": "Differentiation is genuine but should be emphasized more. Hammerspoon replication is 100-200 lines + deps, not 20 lines (Codex conceded this in round 2)."
+    },
+    {
+      "id": "BP-10",
+      "round": 1,
+      "source": "codex-critique",
+      "title": "Analyzer in separate language with no schema contract",
+      "severity": "low",
+      "category": "architecture",
+      "description": "Swift daemon and Python analyzer have no shared schema definition. Field name changes break analyzer silently via .get() defaults.",
+      "file_references": ["Sources/attention-thief-catcher.swift:38-53", "Scripts/analyze.py:86-97"],
+      "resolution": "conceded",
+      "resolution_detail": "Should be documented. Shared schema comments recommended. Low urgency for personal tool."
+    },
+    {
+      "id": "BP-11",
+      "round": 1,
+      "source": "codex-critique",
+      "title": "KeepAlive pattern fragile without ThrottleInterval or ExitTimeOut",
+      "severity": "low",
+      "category": "platform-risk",
+      "description": "If binary is removed, launchd will loop trying to launch. No ExitTimeOut means a hung daemon will not be killed.",
+      "file_references": ["LaunchAgents/com.magnusgille.attention-thief-catcher.plist:14-18"],
+      "resolution": "noted",
+      "resolution_detail": "Low risk for personal use. Could add ThrottleInterval and ExitTimeOut for robustness."
+    },
+    {
+      "id": "BP-12",
+      "round": 2,
+      "source": "codex-rebuttal",
+      "title": "Tool name creates expectation mismatch",
+      "severity": "high",
+      "category": "positioning",
+      "description": "The name 'attention-thief-catcher' and README language ('catch the culprit') imply definitive identification. The tool actually narrows suspects. Users expecting definitive answers will be frustrated by anomaly false positives from normal Cmd-Tab behavior.",
+      "file_references": ["README.md:1", "README.md:11"],
+      "resolution": "new-issue",
+      "resolution_detail": "README language should be softened to 'identify likely culprits' and explain the forensic workflow explicitly."
+    },
+    {
+      "id": "BP-13",
+      "round": 2,
+      "source": "codex-rebuttal",
+      "title": "No mechanism to validate tool's own health",
+      "severity": "medium",
+      "category": "reliability",
+      "description": "If the daemon silently stops receiving notifications (macOS update, App Nap, bug), there is no way to detect this. Polling safety net catches some missed notifications but cannot detect total notification failure.",
+      "file_references": ["Sources/attention-thief-catcher.swift:312-345"],
+      "resolution": "new-issue",
+      "resolution_detail": "Implement silent-failure watchdog: if no events for N minutes while system is active, log a NO_EVENTS_WARNING."
+    },
+    {
+      "id": "BP-14",
+      "round": 2,
+      "source": "codex-rebuttal",
+      "title": "Install script makes no attempt to verify system requirements",
+      "severity": "low",
+      "category": "usability",
+      "description": "install.sh does swiftc -O without checking if swiftc is installed, launchctl bootstrap without checking GUI session, sed without verifying output.",
+      "file_references": ["Scripts/install.sh:16", "Scripts/install.sh:28", "Scripts/install.sh:32"],
+      "resolution": "new-issue",
+      "resolution_detail": "For a public resource, add basic prerequisite checks. Low priority."
+    },
+    {
+      "id": "BP-15",
+      "round": 2,
+      "source": "codex-rebuttal",
+      "title": "Deployment model risk (unsigned LaunchAgent) understated",
+      "severity": "medium",
+      "category": "platform-risk",
+      "description": "macOS Ventura introduced background item notifications; Sequoia further restricted background items. The install.sh launchctl bootstrap with unsigned binary could trigger consent dialogs or fail on future macOS. This is a deployment risk separate from API risks.",
+      "file_references": ["Scripts/install.sh:32"],
+      "resolution": "new-issue",
+      "resolution_detail": "Acknowledged as real risk. No immediate action but should be monitored with each macOS release."
+    },
+    {
+      "id": "BP-16",
+      "round": 2,
+      "source": "codex-rebuttal",
+      "title": "NDJSON defense has internal consistency issue",
+      "severity": "low",
+      "category": "architecture",
+      "description": "Claude defends NDJSON by saying 'the tool is temporary' but also says it should 'remain as a public resource.' These positions are in tension regarding appropriate storage format.",
+      "file_references": [],
+      "resolution": "new-issue",
+      "resolution_detail": "Acknowledge tension. For public resource: document log cleanup. For long-term use: consider SQLite migration path."
+    }
+  ]
+}

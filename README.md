@@ -129,6 +129,10 @@ To delete all collected data: `rm -rf ~/Library/Logs/attention-thief-catcher/`
 
 This tool is designed for diagnosing focus-theft issues on your own machine. Deploying monitoring software on machines you do not own or without user consent may violate applicable laws.
 
+## Design Reviews
+
+The [`debate/`](debate/INDEX.md) directory contains structured adversarial reviews (security, usability, big picture) that were conducted before the initial hardening pass. Each review includes the full debate chain and a summary of findings. See [`debate/INDEX.md`](debate/INDEX.md) for details.
+
 ## License
 
 [MIT](LICENSE)
