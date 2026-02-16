@@ -11,9 +11,24 @@ PLIST_DST="$HOME/Library/LaunchAgents/$PLIST_NAME"
 SWIFT_SRC="$REPO_DIR/Sources/attention-thief-catcher.swift"
 GUI_UID=$(id -u)
 
+# Prerequisite checks
+echo "==> Checking prerequisites..."
+if ! command -v swiftc &>/dev/null; then
+    echo "ERROR: swiftc not found. Install Xcode Command Line Tools:"
+    echo "  xcode-select --install"
+    exit 1
+fi
+
+if ! swiftc -version &>/dev/null; then
+    echo "ERROR: Swift compiler not working. You may need to accept the Xcode license:"
+    echo "  sudo xcodebuild -license accept"
+    exit 1
+fi
+
 echo "==> Compiling $BINARY_NAME..."
 mkdir -p "$INSTALL_DIR"
 swiftc -O -o "$BINARY_PATH" "$SWIFT_SRC" -framework AppKit
+codesign -s - "$BINARY_PATH" 2>/dev/null || true
 echo "    Installed binary to $BINARY_PATH"
 
 # Unload existing agent if present (ignore errors)
@@ -25,7 +40,7 @@ fi
 
 echo "==> Installing launch agent plist..."
 # Expand ~ in the plist to the actual home directory
-sed "s|~/.local/bin|$INSTALL_DIR|g" "$PLIST_SRC" > "$PLIST_DST"
+sed -e "s|~/.local/bin|$INSTALL_DIR|g" -e "s|~/Library|$HOME/Library|g" "$PLIST_SRC" > "$PLIST_DST"
 echo "    Installed plist to $PLIST_DST"
 
 echo "==> Loading agent..."

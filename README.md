@@ -1,6 +1,6 @@
 # Attention Thief Catcher
 
-A lightweight macOS daemon that logs every app focus change to help you catch the culprit when your active window mysteriously loses focus.
+A lightweight macOS daemon that logs every app focus change to help you narrow down the culprit when your active window mysteriously loses focus.
 
 ## The Problem
 
@@ -8,7 +8,11 @@ Something on your Mac keeps stealing window focus. You're typing, and suddenly y
 
 ## The Solution
 
-Attention Thief Catcher runs silently in the background, recording every focus change with millisecond timestamps. When the bug strikes, you have a complete audit trail to identify the offender.
+Attention Thief Catcher runs silently in the background, recording every focus change with millisecond timestamps. When the bug strikes, you have a complete forensic trail to narrow down the suspect.
+
+**How to use it:** Note the approximate time when focus was stolen, then run `python3 Scripts/analyze.py --around "2026-02-16T12:00:00"` to see every event within 30 seconds of that moment. Cross-reference with what you were doing to identify the offender.
+
+> **Note:** This tool records *what* took focus but not *why*. It narrows suspects rather than definitively proving guilt — the anomaly heuristics have false positives (e.g. Cmd-Tab power users will trigger `RAPID_FOCUS`). Human interpretation of the logs is essential.
 
 ### What it monitors
 
@@ -102,6 +106,28 @@ Anomaly events include additional fields:
 ```json
 {"event":"ANOMALY","timestamp":"...","anomalyType":"RAPID_FOCUS","detail":"6 focus switches in 5s window","triggerApp":{...},"processSnapshot":"PID PPID %CPU %MEM COMM\n..."}
 ```
+
+## Privacy
+
+This tool collects the following data and stores it locally on your machine:
+
+- **App names, bundle IDs, executable paths, and PIDs** for every focus change
+- **Process snapshots** (your user's running processes) on anomalies and every 5 minutes
+- **System events** (sleep/wake, screen lock/unlock, session changes)
+
+All data is stored in `~/Library/Logs/attention-thief-catcher/` with restrictive permissions (directory: 0700, files: 0600). Log files older than 30 days are automatically purged. No data is transmitted anywhere.
+
+To delete all collected data: `rm -rf ~/Library/Logs/attention-thief-catcher/`
+
+## Known Limitations
+
+- **Cannot determine causality** — the tool records that app X took focus, but not whether it was user-initiated (Cmd-Tab, click) or stolen programmatically
+- **Spaces / Stage Manager / multi-monitor** — switching between Spaces or Stage Manager groups triggers focus events that may appear as false-positive anomalies
+- **Anomaly heuristics have false positives** — `RAPID_FOCUS` fires on Cmd-Tab power users, `JUST_LAUNCHED_ACTIVATION` fires on normal app launches from Spotlight/Dock
+
+## Responsible Use
+
+This tool is designed for diagnosing focus-theft issues on your own machine. Deploying monitoring software on machines you do not own or without user consent may violate applicable laws.
 
 ## License
 

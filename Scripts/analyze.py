@@ -133,6 +133,14 @@ def analyze_anomalies(events):
             detected_by = item.get("detectedBy", "notification")
             print(f"    {ts}  {app_name} ({bundle_id})")
             print(f"      {detail}  [via {detected_by}]")
+            snapshot = item.get("processSnapshot", "")
+            if snapshot:
+                lines = snapshot.strip().split("\n")
+                print(f"      Process snapshot ({len(lines)} processes):")
+                for ps_line in lines[:10]:
+                    print(f"        {ps_line}")
+                if len(lines) > 10:
+                    print(f"        ... and {len(lines) - 10} more")
         if len(items) > 20:
             print(f"    ... and {len(items) - 20} more")
 

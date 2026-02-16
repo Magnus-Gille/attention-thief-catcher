@@ -18,7 +18,7 @@
     </dict>
 
     <key>ProcessType</key>
-    <string>Background</string>
+    <string>Adaptive</string>
 
     <key>LowPriorityIO</key>
     <true/>
@@ -30,9 +30,9 @@
     <string>Aqua</string>
 
     <key>StandardOutPath</key>
-    <string>/tmp/attention-thief-catcher.stdout.log</string>
+    <string>~/Library/Logs/attention-thief-catcher/stdout.log</string>
 
     <key>StandardErrorPath</key>
-    <string>/tmp/attention-thief-catcher.stderr.log</string>
+    <string>~/Library/Logs/attention-thief-catcher/stderr.log</string>
 </dict>
 </plist>

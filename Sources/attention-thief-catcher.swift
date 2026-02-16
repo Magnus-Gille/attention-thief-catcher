@@ -13,7 +13,27 @@ final class LogWriter {
     init() {
         let home = FileManager.default.homeDirectoryForCurrentUser
         logDir = home.appendingPathComponent("Library/Logs/attention-thief-catcher")
-        try? FileManager.default.createDirectory(at: logDir, withIntermediateDirectories: true)
+
+        // Security: verify log directory is not a symlink
+        let fm = FileManager.default
+        var isDir: ObjCBool = false
+        if fm.fileExists(atPath: logDir.path, isDirectory: &isDir) {
+            let attrs = try? fm.attributesOfItem(atPath: logDir.path)
+            if attrs?[.type] as? FileAttributeType == .typeSymbolicLink {
+                NSLog("attention-thief-catcher: SECURITY: log directory is a symlink, refusing to start")
+                exit(1)
+            }
+        }
+
+        do {
+            try fm.createDirectory(at: logDir, withIntermediateDirectories: true,
+                                   attributes: [.posixPermissions: 0o700])
+        } catch {
+            NSLog("attention-thief-catcher: FATAL: cannot create log directory: \(error)")
+            exit(1)
+        }
+
+        purgeOldLogs()
         rotate()
     }
 
@@ -28,11 +48,26 @@ final class LogWriter {
         formatter.timeZone = TimeZone.current
         let stamp = formatter.string(from: Date())
         let fileURL = logDir.appendingPathComponent("focus-\(stamp).ndjson")
-        FileManager.default.createFile(atPath: fileURL.path, contents: nil)
+        FileManager.default.createFile(atPath: fileURL.path, contents: nil,
+                                       attributes: [.posixPermissions: 0o600])
         fileHandle = FileHandle(forWritingAtPath: fileURL.path)
         fileHandle?.seekToEndOfFile()
         currentFileURL = fileURL
         currentFileSize = 0
+    }
+
+    private func purgeOldLogs() {
+        let fm = FileManager.default
+        let cutoff = Date().addingTimeInterval(-30 * 24 * 3600) // 30 days
+        guard let files = try? fm.contentsOfDirectory(at: logDir, includingPropertiesForKeys: [.creationDateKey]) else { return }
+        for file in files where file.pathExtension == "ndjson" {
+            if let attrs = try? fm.attributesOfItem(atPath: file.path),
+               let created = attrs[.creationDate] as? Date,
+               created < cutoff {
+                try? fm.removeItem(at: file)
+                NSLog("attention-thief-catcher: purged old log: \(file.lastPathComponent)")
+            }
+        }
     }
 
     func write(_ dict: [String: Any]) {
@@ -79,7 +114,7 @@ func appInfo(_ app: NSRunningApplication) -> [String: Any] {
 func processSnapshot() -> String {
     let proc = Process()
     proc.executableURL = URL(fileURLWithPath: "/bin/ps")
-    proc.arguments = ["-eo", "pid,ppid,%cpu,%mem,comm"]
+    proc.arguments = ["-U", NSUserName(), "-eo", "pid,ppid,%cpu,%mem,comm"]
     let pipe = Pipe()
     proc.standardOutput = pipe
     proc.standardError = Pipe()
