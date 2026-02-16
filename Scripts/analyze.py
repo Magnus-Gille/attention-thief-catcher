@@ -23,8 +23,8 @@ LOG_DIR = Path.home() / "Library" / "Logs" / "attention-thief-catcher"
 
 
 def parse_timestamp(ts_str):
-    """Parse ISO8601 timestamp string to datetime."""
-    # Handle fractional seconds
+    """Parse ISO8601 timestamp string to UTC datetime."""
+    # Strip timezone info — all daemon timestamps are UTC
     ts_str = ts_str.rstrip("Z")
     if "+" in ts_str[10:]:
         ts_str = ts_str[:ts_str.rindex("+")]
@@ -38,7 +38,7 @@ def parse_timestamp(ts_str):
         "%Y-%m-%dT%H:%M:%S",
     ):
         try:
-            return datetime.strptime(ts_str, fmt)
+            return datetime.strptime(ts_str, fmt).replace(tzinfo=timezone.utc)
         except ValueError:
             continue
     return None
@@ -345,7 +345,7 @@ def main():
     before = None
     if args.last:
         delta = parse_duration(args.last)
-        after = datetime.now() - delta
+        after = datetime.now(timezone.utc) - delta
 
     events = load_events(after=after, before=before)
 
