@@ -1,11 +1,20 @@
 # Attention Thief Catcher — Project Status
 
-**Last updated:** 2026-02-03
+**Last updated:** 2026-02-25
+
+## Investigation resolved
+
+**Focus thief identified:** Logitech G HUB Agent (`com.logi.ghub.agent`)
+
+On 2026-02-25, the daemon captured G HUB Agent stealing focus 47 times in 4 minutes after a system wake — 43% of all activations. 14 rapid-switch clusters, G HUB Agent present in every one. The agent runs with `activationPolicy: accessory` (background helper that should never take focus) but re-initializes Logitech devices on wake and activates itself with each device detection event. G HUB version 2025.9.807502, peripheral: G PRO X SUPERLIGHT 2.
+
+A bug report has been filed with Logitech via support.logi.com.
+
+**Original suspect:** AltTab (`com.lwouis.alt-tab-macos`) — cleared.
 
 ## What this project does
-Background daemon that logs every macOS focus change to catch an intermittent
-bug where the active window loses focus and the GUI becomes unresponsive.
-Prime suspect: `com.lwouis.alt-tab-macos` (AltTab), especially after sleep/wake.
+Background daemon that logs every macOS focus change to diagnose intermittent
+bugs where the active window loses focus.
 
 ## What's been built (all complete)
 
@@ -44,5 +53,5 @@ Python 3 log analysis. Modes:
 - **Collecting data** — logs writing to `~/Library/Logs/attention-thief-catcher/`
 
 ## Next steps
-1. Wait for the bug to reoccur, then `python3 Scripts/analyze.py --anomalies`
-2. Use `--around` with the approximate timestamp to inspect surrounding events
+1. Share the tool with the community — many people are asking "how do I find what's stealing focus?" with no good answer
+2. Keep the daemon running to catch other potential focus stealers

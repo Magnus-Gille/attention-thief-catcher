@@ -35,6 +35,36 @@ The daemon automatically flags suspicious behavior:
 
 When an anomaly is detected, a full `ps` snapshot is captured alongside it.
 
+## Real-World Example
+
+On 2026-02-25, this tool caught **Logitech G HUB Agent** (`com.logi.ghub.agent`) stealing focus 47 times in 4 minutes after a system wake — 43% of all focus activations in that period:
+
+```
+============================================================
+  FOCUS FREQUENCY (112 activations)
+============================================================
+     47  Logitech G HUB Agent (com.logi.ghub.agent)
+         ###############################################
+     23  loginwindow (com.apple.loginwindow)
+         #######################
+     21  Ghostty (com.mitchellh.ghostty)
+         #####################
+      9  Battle.net (net.battle.app)
+         #########
+      7  Microsoft Word (com.microsoft.Word)
+         #######
+```
+
+The rapid-switch clusters made the culprit obvious — G HUB Agent appeared in every single one of the 14 clusters:
+
+```
+  Cluster 2: 7 switches in 4.3s
+  Apps: Ghostty -> Logitech G HUB Agent -> Ghostty -> Logitech G HUB Agent
+        -> Ghostty -> Logitech G HUB Agent -> Ghostty
+```
+
+G HUB runs as an "accessory" app (background helper that should never take focus) but re-initializes Logitech devices on wake, activating itself with each device detection event. A [bug report has been filed](https://forums.macrumors.com/threads/logitech-g-hub-keeps-on-trying-to-get-focus-in-macos-tahoe.2469649/) with Logitech.
+
 ## Requirements
 
 - macOS (uses AppKit/NSWorkspace)
@@ -132,6 +162,30 @@ This tool is designed for diagnosing focus-theft issues on your own machine. Dep
 ## Design Reviews
 
 The [`debate/`](debate/INDEX.md) directory contains structured adversarial reviews (security, usability, big picture) that were conducted before the initial hardening pass. Each review includes the full debate chain and a summary of findings. See [`debate/INDEX.md`](debate/INDEX.md) for details.
+
+## Known Focus Stealers
+
+Apps reported to steal focus on macOS:
+
+| App | Bundle ID | Notes |
+|-----|-----------|-------|
+| **Logitech G HUB Agent** | `com.logi.ghub.agent` | Re-initializes devices on wake, activates itself repeatedly. [Confirmed by this tool.](#real-world-example) |
+| **HP Alerts** | — | Background helper that grabs focus to show printer status. |
+| **Carrot Weather** | — | Reported to steal focus during notification updates. |
+| **SecurityAgent** | `com.apple.SecurityAgent` | macOS system process, reported to grab focus after macOS 26.1. |
+
+If you catch another focus stealer, please [open an issue](../../issues) so we can add it to this list.
+
+## Community
+
+Many macOS users experience focus-stealing bugs but have no way to identify the culprit. These are the discussions where people are looking for help:
+
+- [Logitech G Hub keeps on trying to get focus in macOS Tahoe](https://forums.macrumors.com/threads/logitech-g-hub-keeps-on-trying-to-get-focus-in-macos-tahoe.2469649/) — MacRumors
+- [Active window loses focus](https://forums.macrumors.com/threads/active-window-loses-focus.2321723/) — MacRumors
+- [Something is stealing application focus](https://discussions.apple.com/thread/255541717) — Apple Community
+- [macOS process stealing window focus](https://gist.github.com/holgr/59f8df7f81aa2b74d67e0ab95e2fd28a) — GitHub Gist, someone building a similar tool
+- [Mac apps stealing window/keyboard/mouse focus](https://vi-control.net/community/threads/mac-apps-stealing-window-keyboard-mouse-focus-how-to-stop-it-upgrade-to-sequoia.158515/) — VI-Control
+- [Issues with Input Focus after macOS 26.1](https://discussions.apple.com/thread/256192312) — Apple Community
 
 ## License
 
