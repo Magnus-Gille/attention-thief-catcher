@@ -65,7 +65,7 @@ except Exception:
             LAST_EVENT_TYPE=""
         fi
 
-        if [ "$LAST_EVENT_TYPE" = "SLEEP" ] || [ "$LAST_EVENT_TYPE" = "SCREEN_SLEEP" ]; then
+        if [ "$LAST_EVENT_TYPE" = "SYSTEM_WILL_SLEEP" ] || [ "$LAST_EVENT_TYPE" = "SCREENS_DID_SLEEP" ]; then
             echo "    Freshness  : (suppressed — last event indicates system is sleeping)"
             SLEEP_SUPPRESSED=true
         elif [ "$STALE_MINUTES" -gt "$STALE_THRESHOLD_MINUTES" ]; then
@@ -95,7 +95,7 @@ if [ ! -d "$LOG_DIR" ]; then
 else
     DAEMON_START_LINES=$(find "$LOG_DIR" -name "*.ndjson" -type f -print0 2>/dev/null \
         | xargs -0 ls -t 2>/dev/null \
-        | xargs grep -h '"DAEMON_START"' 2>/dev/null | tail -5 || true)
+        | xargs grep -h '"DAEMON_START"' 2>/dev/null | head -5 || true)
 
     if [ -z "$DAEMON_START_LINES" ]; then
         echo "    No DAEMON_START events found"
