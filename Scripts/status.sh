@@ -13,7 +13,7 @@ SLEEP_SUPPRESSED=false
 echo "==> Daemon status..."
 LAUNCHCTL_OUTPUT=$(launchctl print "gui/$UID/$SERVICE_LABEL" 2>&1) || true
 
-if echo "$LAUNCHCTL_OUTPUT" | grep -qE "could not find service|No such process|does not exist"; then
+if echo "$LAUNCHCTL_OUTPUT" | grep -iqE "could not find service|No such process|does not exist"; then
     echo "    Status  : NOT LOADED"
     echo "    Hint    : Run Scripts/install.sh to load the daemon."
 else
@@ -65,7 +65,7 @@ except Exception:
             LAST_EVENT_TYPE=""
         fi
 
-        if [ "$LAST_EVENT_TYPE" = "SYSTEM_WILL_SLEEP" ] || [ "$LAST_EVENT_TYPE" = "SCREENS_DID_SLEEP" ]; then
+        if [ "$LAST_EVENT_TYPE" = "SYSTEM_WILL_SLEEP" ]; then
             echo "    Freshness  : (suppressed — last event indicates system is sleeping)"
             SLEEP_SUPPRESSED=true
         elif [ "$STALE_MINUTES" -gt "$STALE_THRESHOLD_MINUTES" ]; then
