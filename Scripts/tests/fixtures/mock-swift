@@ -1,0 +1,19 @@
+#!/usr/bin/env bash
+set -euo pipefail
+
+printf '%s\n' '---' >> "$MOCK_SWIFT_LOG"
+printf '%s\n' "$@" >> "$MOCK_SWIFT_LOG"
+
+if [ "${1:-}" = "--version" ]; then
+    echo "Apple Swift version 6.0 (mock)"
+    exit 0
+fi
+
+if [ "${1:-}" != "build" ] || [ "${2:-}" != "-c" ] || [ "${3:-}" != "release" ]; then
+    echo "unexpected swift invocation" >&2
+    exit 1
+fi
+
+mkdir -p "$MOCK_REPO/.build/release"
+printf '%s\n' 'mock SwiftPM release product' > "$MOCK_REPO/.build/release/attention-thief-catcher"
+chmod 755 "$MOCK_REPO/.build/release/attention-thief-catcher"

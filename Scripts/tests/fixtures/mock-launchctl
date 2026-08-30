@@ -1,0 +1,27 @@
+#!/usr/bin/env bash
+set -euo pipefail
+
+COMMAND="$1"
+{
+    printf '%s' "$COMMAND"
+    shift
+    for argument in "$@"; do
+        printf ' %s' "$argument"
+    done
+    printf '\n'
+} >> "$MOCK_LAUNCHCTL_LOG"
+
+case "$COMMAND" in
+    print)
+        if [ -f "$MOCK_LAUNCHCTL_STATE" ]; then
+            exit 0
+        fi
+        exit 1
+        ;;
+    bootstrap)
+        : > "$MOCK_LAUNCHCTL_STATE"
+        ;;
+    bootout)
+        rm -f "$MOCK_LAUNCHCTL_STATE"
+        ;;
+esac

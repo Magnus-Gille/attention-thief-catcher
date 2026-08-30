@@ -31,7 +31,8 @@ launchd user agent: RunAtLoad, KeepAlive on crash, background priority, Aqua onl
 Binary at ~/.local/bin/attention-thief-catcher.
 
 ### Scripts/install.sh
-Compiles with `swiftc -O`, installs binary, loads agent via `launchctl bootstrap`.
+Builds the SwiftPM release product, installs the binary, and loads the agent via
+`launchctl bootstrap`.
 
 ### Scripts/uninstall.sh
 Unloads agent, removes binary and plist, preserves logs.
@@ -44,7 +45,7 @@ Python 3 log analysis. Modes:
 - `--around "ISO8601"` — events ±30s around timestamp
 
 ## Build status
-- Swift code compiles clean with `swiftc -O` (verified 2026-02-03)
+- Swift code builds clean with `swift build -c release` (verified 2026-08-31)
 - No dependencies beyond system frameworks (AppKit, Foundation)
 
 ## Deployment status

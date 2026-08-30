@@ -8,26 +8,32 @@ BINARY_PATH="$INSTALL_DIR/$BINARY_NAME"
 PLIST_NAME="com.magnusgille.attention-thief-catcher.plist"
 PLIST_SRC="$REPO_DIR/LaunchAgents/$PLIST_NAME"
 PLIST_DST="$HOME/Library/LaunchAgents/$PLIST_NAME"
-SWIFT_SRC="$REPO_DIR/Sources/attention-thief-catcher.swift"
+SWIFT_PRODUCT="$REPO_DIR/.build/release/$BINARY_NAME"
 GUI_UID=$(id -u)
 
 # Prerequisite checks
 echo "==> Checking prerequisites..."
-if ! command -v swiftc &>/dev/null; then
-    echo "ERROR: swiftc not found. Install Xcode Command Line Tools:"
+if ! command -v swift &>/dev/null; then
+    echo "ERROR: swift not found. Install Xcode Command Line Tools:"
     echo "  xcode-select --install"
     exit 1
 fi
 
-if ! swiftc -version &>/dev/null; then
-    echo "ERROR: Swift compiler not working. You may need to accept the Xcode license:"
+if ! swift --version &>/dev/null; then
+    echo "ERROR: Swift toolchain not working. You may need to accept the Xcode license:"
     echo "  sudo xcodebuild -license accept"
     exit 1
 fi
 
 echo "==> Compiling $BINARY_NAME..."
-mkdir -p "$INSTALL_DIR"
-swiftc -O -o "$BINARY_PATH" "$SWIFT_SRC" -framework AppKit
+mkdir -p "$INSTALL_DIR" "$(dirname "$PLIST_DST")"
+swift build -c release --package-path "$REPO_DIR" --product "$BINARY_NAME"
+if [ ! -x "$SWIFT_PRODUCT" ]; then
+    echo "ERROR: SwiftPM did not produce the expected release product: $SWIFT_PRODUCT"
+    exit 1
+fi
+cp "$SWIFT_PRODUCT" "$BINARY_PATH"
+chmod 755 "$BINARY_PATH"
 codesign -s - "$BINARY_PATH" 2>/dev/null || true
 echo "    Installed binary to $BINARY_PATH"
 
