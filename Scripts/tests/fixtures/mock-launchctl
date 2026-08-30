@@ -13,15 +13,27 @@ COMMAND="$1"
 
 case "$COMMAND" in
     print)
+        if [ "${1:-}" != "$MOCK_GUI_DOMAIN/$MOCK_SERVICE_LABEL" ]; then
+            echo "unexpected launchctl print target: ${1:-}" >&2
+            exit 2
+        fi
         if [ -f "$MOCK_LAUNCHCTL_STATE" ]; then
             exit 0
         fi
         exit 1
         ;;
     bootstrap)
+        if [ "${1:-}" != "$MOCK_GUI_DOMAIN" ] || [ "${2:-}" != "$MOCK_PLIST_PATH" ]; then
+            echo "unexpected launchctl bootstrap target" >&2
+            exit 2
+        fi
         : > "$MOCK_LAUNCHCTL_STATE"
         ;;
     bootout)
+        if [ "${1:-}" != "$MOCK_GUI_DOMAIN/$MOCK_SERVICE_LABEL" ]; then
+            echo "unexpected launchctl bootout target: ${1:-}" >&2
+            exit 2
+        fi
         rm -f "$MOCK_LAUNCHCTL_STATE"
         ;;
 esac
