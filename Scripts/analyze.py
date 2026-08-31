@@ -10,6 +10,7 @@ Usage:
 """
 
 import argparse
+import hashlib
 import json
 import os
 import re
@@ -127,17 +128,29 @@ def parse_event_line(line, after=None, before=None):
     return event
 
 
+def is_anomaly(event):
+    """Return whether an event is an analyzer-visible anomaly."""
+    event_type = event.get("event", "")
+    return event_type == "ANOMALY" or (
+        isinstance(event_type, str) and event_type.startswith("POLL_ANOMALY_")
+    )
+
+
 class _FollowFile:
     """A newline-buffered reader for one inode currently being followed."""
 
-    def __init__(self, path, start_at_end):
+    _DIGEST_CHUNK_BYTES = 1024 * 1024
+
+    def __init__(self, path):
         self.path = path
         self.handle = open(path, "r", encoding="utf-8", errors="replace", newline="")
         stat_result = os.fstat(self.handle.fileno())
         self.identity = (stat_result.st_dev, stat_result.st_ino)
         self.buffer = ""
-        if start_at_end:
-            self.handle.seek(0, os.SEEK_END)
+        self._last_size = stat_result.st_size
+        self._last_mtime_ns = stat_result.st_mtime_ns
+        self._last_offset = 0
+        self._prefix_digest = self._digest_prefix(0)
 
     @property
     def fd(self):
@@ -149,11 +162,51 @@ class _FollowFile:
         except OSError:
             return None
 
+    def _digest_prefix(self, length):
+        digest = hashlib.blake2b(digest_size=16)
+        offset = 0
+        while offset < length:
+            data = os.pread(self.fd, min(self._DIGEST_CHUNK_BYTES, length - offset), offset)
+            if not data:
+                break
+            digest.update(data)
+            offset += len(data)
+        return digest.digest()
+
+    def start_after(self, offset, expected_size, expected_mtime_ns):
+        """Arm a newly registered file after its pre-open EOF boundary."""
+        size = self.current_size()
+        if size is None:
+            return
+        offset = min(max(offset, 0), size)
+        self.handle.seek(offset)
+        self._last_size = min(expected_size, size)
+        self._last_mtime_ns = expected_mtime_ns
+        self._last_offset = offset
+        self._prefix_digest = self._digest_prefix(offset)
+
+    def _rewritten_before_offset(self, size, mtime_ns):
+        if size == self._last_size and mtime_ns == self._last_mtime_ns:
+            return False
+        if size < self._last_size:
+            return True
+        # Hash every byte already consumed. This distinguishes an append from
+        # an equal/larger in-place rewrite even when the inode is unchanged.
+        return self._digest_prefix(self._last_offset) != self._prefix_digest
+
+    def _remember_position(self, size, mtime_ns):
+        offset = self.handle.tell()
+        self._last_size = size
+        self._last_mtime_ns = mtime_ns
+        self._last_offset = offset
+        self._prefix_digest = self._digest_prefix(offset)
+
     def read_events(self, after=None, before=None):
         """Read complete lines, preserving an incomplete final line."""
-        size = self.current_size()
-        if size is not None and self.handle.tell() > size:
-            # The daemon may have truncated a file in place during restart.
+        stat_result = os.fstat(self.fd)
+        size = stat_result.st_size
+        if self._rewritten_before_offset(size, stat_result.st_mtime_ns):
+            # A restart can rewrite in place without changing the inode.
             self.handle.seek(0)
             self.buffer = ""
 
@@ -167,6 +220,7 @@ class _FollowFile:
             event = parse_event_line(line, after=after, before=before)
             if event is not None:
                 events.append(event)
+        self._remember_position(size, stat_result.st_mtime_ns)
         return events
 
     def close(self):
@@ -195,12 +249,16 @@ def _event_display(event):
     """Format one event as a compact line suitable for a live terminal."""
     timestamp = event.get("timestamp", "?")
     event_type = event.get("event", "?")
-    if event_type == "ANOMALY":
-        anomaly_type = event.get("anomalyType", "UNKNOWN")
+    if is_anomaly(event):
+        if event_type == "ANOMALY":
+            anomaly_type = event.get("anomalyType", "UNKNOWN")
+            label = f"ANOMALY[{anomaly_type}]"
+        else:
+            label = event_type
         trigger = event.get("triggerApp") or {}
         name = trigger.get("name") or event.get("name", "")
         bundle_id = trigger.get("bundleID") or event.get("bundleID", "")
-        line = f"{timestamp}  ⚠ ANOMALY[{anomaly_type}]"
+        line = f"{timestamp}  ⚠ {label}"
     else:
         name = event.get("name", "")
         bundle_id = event.get("bundleID", "")
@@ -219,7 +277,7 @@ def _event_display(event):
 def _emit_follow_event(event, output, use_color):
     line = _event_display(event)
     if use_color:
-        color = "\033[31m" if event.get("event") == "ANOMALY" else "\033[36m"
+        color = "\033[31m" if is_anomaly(event) else "\033[36m"
         line = f"{color}{line}\033[0m"
     print(line, file=output, flush=True)
 
@@ -310,23 +368,29 @@ def follow_events(
                 reader_for_identity.path = path
                 continue
             try:
-                reader = _FollowFile(path, start_at_end=start_at_end)
+                reader = _FollowFile(path)
             except OSError:
                 # Rotation can remove a path between stat and open; the
                 # directory vnode event will cause another discovery pass.
                 continue
             readers[reader.fd] = reader
             register(reader.fd)
-            if not start_at_end:
+            if start_at_end:
+                reader.start_after(
+                    stat_result.st_size,
+                    stat_result.st_size,
+                    stat_result.st_mtime_ns,
+                )
+            else:
                 for event in reader.read_events(after=after, before=before):
-                    if not anomalies_only or event.get("event") == "ANOMALY":
+                    if not anomalies_only or is_anomaly(event):
                         _emit_follow_event(event, output, use_color)
 
         for fd, reader in list(readers.items()):
             if reader.identity in identities:
                 continue
             for event in reader.read_events(after=after, before=before):
-                if not anomalies_only or event.get("event") == "ANOMALY":
+                if not anomalies_only or is_anomaly(event):
                     _emit_follow_event(event, output, use_color)
             unregister(reader.fd)
             reader.close()
@@ -350,7 +414,7 @@ def follow_events(
                 if reader is None:
                     continue
                 for event in reader.read_events(after=after, before=before):
-                    if not anomalies_only or event.get("event") == "ANOMALY":
+                    if not anomalies_only or is_anomaly(event):
                         _emit_follow_event(event, output, use_color)
                 if getattr(notification, "fflags", 0) & (_kq_constant("NOTE_DELETE") | _kq_constant("NOTE_RENAME")):
                     reader_fd = reader.fd
@@ -386,7 +450,7 @@ def print_header(title):
 
 def analyze_anomalies(events):
     """Show all anomaly events."""
-    anomalies = [e for e in events if e.get("event") == "ANOMALY"]
+    anomalies = [e for e in events if is_anomaly(e)]
     print_header(f"ANOMALIES ({len(anomalies)} total)")
 
     if not anomalies:
@@ -395,7 +459,7 @@ def analyze_anomalies(events):
 
     by_type = defaultdict(list)
     for a in anomalies:
-        by_type[a.get("anomalyType", "UNKNOWN")].append(a)
+        by_type[a.get("anomalyType") or a.get("event", "UNKNOWN")].append(a)
 
     for atype, items in sorted(by_type.items()):
         print(f"\n  {atype} ({len(items)} occurrences)")

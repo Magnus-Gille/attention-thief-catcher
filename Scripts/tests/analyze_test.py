@@ -4,6 +4,7 @@
 import importlib.util
 import io
 import json
+import os
 import select
 import tempfile
 import unittest
@@ -39,10 +40,11 @@ class FakeKEvent:
 
 
 class FakeKQueue:
-    def __init__(self, current_path, rotated_path, replacement_path):
+    def __init__(self, current_path, rotated_path, replacement_path, replacement_event="ANOMALY"):
         self.current_path = current_path
         self.rotated_path = rotated_path
         self.replacement_path = replacement_path
+        self.replacement_event = replacement_event
         self.active = set()
         self.registered = []
         self.wait_calls = 0
@@ -71,7 +73,7 @@ class FakeKQueue:
             self.replacement_path.write_text(
                 json.dumps(
                     {
-                        "event": "ANOMALY",
+                        "event": self.replacement_event,
                         "timestamp": "2026-08-31T12:00:01.000Z",
                         "anomalyType": "UNKNOWN_BUNDLE",
                         "triggerApp": {"name": "Mystery", "bundleID": "x.mystery"},
@@ -121,7 +123,7 @@ class AnalyzeTests(unittest.TestCase):
         with tempfile.TemporaryDirectory() as tmp:
             path = Path(tmp) / "focus-current.ndjson"
             path.write_text('{"event":"APP_ACTIVATED"', encoding="utf-8")
-            reader = analyze._FollowFile(path, start_at_end=False)
+            reader = analyze._FollowFile(path)
             try:
                 self.assertEqual(reader.read_events(), [])
                 with path.open("a", encoding="utf-8") as handle:
@@ -134,7 +136,7 @@ class AnalyzeTests(unittest.TestCase):
         with tempfile.TemporaryDirectory() as tmp:
             path = Path(tmp) / "focus-current.ndjson"
             path.write_text(event_line("APP_ACTIVATED"), encoding="utf-8")
-            reader = analyze._FollowFile(path, start_at_end=False)
+            reader = analyze._FollowFile(path)
             try:
                 self.assertEqual(len(reader.read_events()), 1)
                 path.write_text(event_line("DAEMON_START", "2026-08-31T12:00:03Z"), encoding="utf-8")
@@ -142,6 +144,100 @@ class AnalyzeTests(unittest.TestCase):
                 self.assertEqual([event["event"] for event in events], ["DAEMON_START"])
             finally:
                 reader.close()
+
+    def test_same_size_in_place_rewrite_rewinds_reader(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            path = Path(tmp) / "focus-current.ndjson"
+            old = json.dumps({"event": "OLD", "timestamp": "2026-08-31T12:00:00Z"}) + "\n"
+            new = json.dumps({"event": "NEW", "timestamp": "2026-08-31T12:00:00Z"}) + "\n"
+            self.assertEqual(len(old), len(new))
+            path.write_text(old, encoding="utf-8")
+            reader = analyze._FollowFile(path)
+            try:
+                self.assertEqual([event["event"] for event in reader.read_events()], ["OLD"])
+                previous_mtime = path.stat().st_mtime_ns
+                path.write_text(new, encoding="utf-8")
+                os.utime(path, ns=(previous_mtime, previous_mtime + 1_000_000))
+                self.assertEqual([event["event"] for event in reader.read_events()], ["NEW"])
+            finally:
+                reader.close()
+
+    def test_startup_registration_catches_write_between_open_and_register(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            log_dir = Path(tmp)
+            current = log_dir / "focus-current.ndjson"
+            current.write_text(event_line("DAEMON_START"), encoding="utf-8")
+            output = io.StringIO()
+
+            class RegistrationRaceKQueue(FakeKQueue):
+                def control(self, changes, max_events, timeout=None):
+                    if changes is not None and len(self.registered) == 1:
+                        with current.open("a", encoding="utf-8") as handle:
+                            handle.write(event_line("APP_ACTIVATED"))
+                    if changes is None:
+                        self.wait_calls += 1
+                        self.timeouts.append(timeout)
+                        directory_fd = self.registered[0]
+                        file_fd = [fd for fd in self.active if fd != directory_fd][0]
+                        return [FakeNotification(file_fd, TEST_NOTE_WRITE)]
+                    result = super().control(changes, max_events, timeout)
+                    if changes is not None and len(self.registered) == 2:
+                        self.registration_completed = True
+                    return result
+
+            fake_kqueue = RegistrationRaceKQueue(current, log_dir / "rotated", log_dir / "unused")
+            fake_kqueue.registration_completed = False
+            with ExitStack() as stack:
+                stack.enter_context(mock.patch.object(analyze, "LOG_DIR", log_dir))
+                for name, value in self.select_constants().items():
+                    stack.enter_context(mock.patch.object(select, name, value, create=True))
+                result = analyze.follow_events(
+                    output=output,
+                    use_color=False,
+                    kqueue_factory=lambda: fake_kqueue,
+                    kevent_factory=FakeKEvent,
+                    stop_when=lambda: len(output.getvalue().splitlines()) >= 1,
+                )
+
+            self.assertEqual(result, 0)
+            self.assertTrue(fake_kqueue.registration_completed)
+            lines = output.getvalue().splitlines()
+            self.assertEqual(
+                lines,
+                ["2026-08-31T12:00:00.000Z  APP_ACTIVATED  Ghostty (com.mitchellh.ghostty)"],
+            )
+
+    def test_follow_anomalies_includes_poll_anomaly_events(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            log_dir = Path(tmp)
+            current = log_dir / "focus-current.ndjson"
+            rotated = log_dir / "focus-current.rotated"
+            replacement = log_dir / "focus-restarted.ndjson"
+            current.write_text(event_line("DAEMON_START"), encoding="utf-8")
+            fake_kqueue = FakeKQueue(
+                current,
+                rotated,
+                replacement,
+                replacement_event="POLL_ANOMALY_NON_REGULAR_FRONTMOST",
+            )
+            output = io.StringIO()
+            with ExitStack() as stack:
+                stack.enter_context(mock.patch.object(analyze, "LOG_DIR", log_dir))
+                for name, value in self.select_constants().items():
+                    stack.enter_context(mock.patch.object(select, name, value, create=True))
+                result = analyze.follow_events(
+                    output=output,
+                    use_color=False,
+                    anomalies_only=True,
+                    kqueue_factory=lambda: fake_kqueue,
+                    kevent_factory=FakeKEvent,
+                    stop_when=lambda: len(output.getvalue().splitlines()) >= 1,
+                )
+
+            self.assertEqual(result, 0)
+            lines = output.getvalue().splitlines()
+            self.assertEqual(len(lines), 1)
+            self.assertIn("⚠ POLL_ANOMALY_NON_REGULAR_FRONTMOST", lines[0])
 
     def test_follow_handles_write_rotation_and_replacement_without_spin(self):
         with tempfile.TemporaryDirectory() as tmp:
