@@ -68,7 +68,7 @@ G HUB runs as an "accessory" app (background helper that should never take focus
 ## Requirements
 
 - macOS (uses AppKit/NSWorkspace)
-- Swift compiler (`swiftc`, included with Xcode or Xcode Command Line Tools)
+- Swift toolchain (`swift`, included with Xcode or Xcode Command Line Tools)
 - Python 3 (for the log analyzer, included with macOS)
 
 ## Install
@@ -77,7 +77,7 @@ G HUB runs as an "accessory" app (background helper that should never take focus
 ./Scripts/install.sh
 ```
 
-This compiles the Swift binary, installs it to `~/.local/bin/`, registers a LaunchAgent, and starts the daemon. It will auto-start on every login and restart if it crashes.
+This builds the SwiftPM release product, installs it to `~/.local/bin/`, registers a LaunchAgent, and starts the daemon. It will auto-start on every login and restart if it crashes.
 
 Logs are written to `~/Library/Logs/attention-thief-catcher/`.
 
