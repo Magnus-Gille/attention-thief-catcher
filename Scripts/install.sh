@@ -9,7 +9,6 @@ SERVICE_LABEL="com.magnusgille.attention-thief-catcher"
 PLIST_NAME="$SERVICE_LABEL.plist"
 PLIST_SRC="$REPO_DIR/LaunchAgents/$PLIST_NAME"
 PLIST_DST="$HOME/Library/LaunchAgents/$PLIST_NAME"
-SWIFT_PRODUCT="$REPO_DIR/.build/release/$BINARY_NAME"
 GUI_UID=$(id -u)
 SERVICE_DOMAIN="gui/$GUI_UID"
 SERVICE_TARGET="$SERVICE_DOMAIN/$SERVICE_LABEL"
@@ -31,6 +30,12 @@ fi
 echo "==> Compiling $BINARY_NAME..."
 mkdir -p "$INSTALL_DIR" "$(dirname "$PLIST_DST")"
 swift build -c release --package-path "$REPO_DIR" --product "$BINARY_NAME"
+SWIFT_BIN_PATH="$(swift build -c release --package-path "$REPO_DIR" --show-bin-path)"
+if [ -z "$SWIFT_BIN_PATH" ]; then
+    echo "ERROR: SwiftPM did not report its release product directory"
+    exit 1
+fi
+SWIFT_PRODUCT="$SWIFT_BIN_PATH/$BINARY_NAME"
 if [ ! -x "$SWIFT_PRODUCT" ]; then
     echo "ERROR: SwiftPM did not produce the expected release product: $SWIFT_PRODUCT"
     exit 1

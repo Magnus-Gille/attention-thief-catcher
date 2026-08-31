@@ -9,11 +9,24 @@ if [ "${1:-}" = "--version" ]; then
     exit 0
 fi
 
-if [ "${1:-}" != "build" ] || [ "${2:-}" != "-c" ] || [ "${3:-}" != "release" ]; then
+if [ "${1:-}" != "build" ] || [ "${2:-}" != "-c" ] || [ "${3:-}" != "release" ] || \
+   [ "${4:-}" != "--package-path" ] || [ "${5:-}" != "$MOCK_REPO" ]; then
     echo "unexpected swift invocation" >&2
     exit 1
 fi
 
-mkdir -p "$MOCK_REPO/.build/release"
-printf '%s\n' 'mock SwiftPM release product' > "$MOCK_REPO/.build/release/attention-thief-catcher"
-chmod 755 "$MOCK_REPO/.build/release/attention-thief-catcher"
+MOCK_PRODUCT_DIR="$MOCK_REPO/.build/custom-release"
+if [ "$#" -eq 6 ] && [ "${6:-}" = "--show-bin-path" ]; then
+    mkdir -p "$MOCK_PRODUCT_DIR"
+    printf '%s\n' "$MOCK_PRODUCT_DIR"
+    exit 0
+fi
+
+if [ "$#" -ne 7 ] || [ "${6:-}" != "--product" ] || [ "${7:-}" != "attention-thief-catcher" ]; then
+    echo "unexpected swift build invocation" >&2
+    exit 1
+fi
+
+mkdir -p "$MOCK_PRODUCT_DIR"
+printf '%s\n' 'mock SwiftPM release product' > "$MOCK_PRODUCT_DIR/attention-thief-catcher"
+chmod 755 "$MOCK_PRODUCT_DIR/attention-thief-catcher"

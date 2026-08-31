@@ -13,6 +13,7 @@ MOCK_LAUNCHCTL_STATE="$TEST_ROOT/launchctl.loaded"
 MOCK_GUI_DOMAIN="gui/$(id -u)"
 MOCK_SERVICE_LABEL="com.magnusgille.attention-thief-catcher"
 MOCK_PLIST_PATH="$MOCK_HOME/Library/LaunchAgents/$MOCK_SERVICE_LABEL.plist"
+MOCK_PRODUCT_DIR="$TEST_REPO/.build/custom-release"
 ORIGINAL_PRODUCT="$REPO_DIR/.build/release/attention-thief-catcher"
 ORIGINAL_PRODUCT_PRESENT=false
 ORIGINAL_PRODUCT_HASH=""
@@ -62,16 +63,18 @@ run_install "$TEST_ROOT/install-second.log"
 
 INSTALLED_BINARY="$MOCK_HOME/.local/bin/attention-thief-catcher"
 INSTALLED_PLIST="$MOCK_PLIST_PATH"
-EXPECTED_PRODUCT="$TEST_REPO/.build/release/attention-thief-catcher"
+EXPECTED_PRODUCT="$MOCK_PRODUCT_DIR/attention-thief-catcher"
 
-if ! grep -Fqx -- "build" "$MOCK_SWIFT_LOG" || \
-   ! grep -Fqx -- "-c" "$MOCK_SWIFT_LOG" || \
-   ! grep -Fqx -- "release" "$MOCK_SWIFT_LOG" || \
-   ! grep -Fqx -- "--package-path" "$MOCK_SWIFT_LOG" || \
-   ! grep -Fqx -- "$TEST_REPO" "$MOCK_SWIFT_LOG" || \
-   ! grep -Fqx -- "--product" "$MOCK_SWIFT_LOG" || \
-   ! grep -Fqx -- "attention-thief-catcher" "$MOCK_SWIFT_LOG"; then
-    echo "FAIL: installer did not invoke SwiftPM release build with the expected product" >&2
+if ! diff -u <(
+    printf '%s\n' \
+        '---' '--version' \
+        '---' 'build' '-c' 'release' '--package-path' "$TEST_REPO" '--product' 'attention-thief-catcher' \
+        '---' 'build' '-c' 'release' '--package-path' "$TEST_REPO" '--show-bin-path' \
+        '---' '--version' \
+        '---' 'build' '-c' 'release' '--package-path' "$TEST_REPO" '--product' 'attention-thief-catcher' \
+        '---' 'build' '-c' 'release' '--package-path' "$TEST_REPO" '--show-bin-path'
+) "$MOCK_SWIFT_LOG"; then
+    echo "FAIL: installer did not invoke SwiftPM with the expected build and bin-path commands" >&2
     sed -n '1,240p' "$MOCK_SWIFT_LOG" >&2
     exit 1
 fi
