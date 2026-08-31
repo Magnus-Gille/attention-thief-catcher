@@ -136,6 +136,17 @@ def is_anomaly(event):
     )
 
 
+def anomaly_context(event):
+    """Return the displayed app identity and detector source for an anomaly."""
+    trigger = event.get("triggerApp") or {}
+    app_name = trigger.get("name") or event.get("name", "?")
+    bundle_id = trigger.get("bundleID") or event.get("bundleID", "?")
+    detected_by = event.get("detectedBy")
+    if not detected_by:
+        detected_by = "poll" if event.get("event", "").startswith("POLL_ANOMALY_") else "notification"
+    return app_name, bundle_id, detected_by
+
+
 class _FollowFile:
     """A newline-buffered reader for one inode currently being followed."""
 
@@ -255,9 +266,9 @@ def _event_display(event):
             label = f"ANOMALY[{anomaly_type}]"
         else:
             label = event_type
-        trigger = event.get("triggerApp") or {}
-        name = trigger.get("name") or event.get("name", "")
-        bundle_id = trigger.get("bundleID") or event.get("bundleID", "")
+        name, bundle_id, _ = anomaly_context(event)
+        name = "" if name == "?" else name
+        bundle_id = "" if bundle_id == "?" else bundle_id
         line = f"{timestamp}  ⚠ {label}"
     else:
         name = event.get("name", "")
@@ -467,10 +478,7 @@ def analyze_anomalies(events):
         for item in items[:20]:  # Show first 20 per type
             ts = item.get("timestamp", "?")
             detail = item.get("detail", "")
-            trigger = item.get("triggerApp", {})
-            app_name = trigger.get("name", "?")
-            bundle_id = trigger.get("bundleID", "?")
-            detected_by = item.get("detectedBy", "notification")
+            app_name, bundle_id, detected_by = anomaly_context(item)
             print(f"    {ts}  {app_name} ({bundle_id})")
             print(f"      {detail}  [via {detected_by}]")
             snapshot = item.get("processSnapshot", "")

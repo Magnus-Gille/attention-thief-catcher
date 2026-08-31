@@ -239,6 +239,23 @@ class AnalyzeTests(unittest.TestCase):
             self.assertEqual(len(lines), 1)
             self.assertIn("⚠ POLL_ANOMALY_NON_REGULAR_FRONTMOST", lines[0])
 
+    def test_batch_poll_anomaly_uses_top_level_identity_and_poll_source(self):
+        output = io.StringIO()
+        event = {
+            "event": "POLL_ANOMALY_NON_REGULAR_FRONTMOST",
+            "timestamp": "2026-08-31T12:00:00Z",
+            "name": "Logitech G HUB Agent",
+            "bundleID": "com.logi.ghub.agent",
+            "detail": "accessory app is frontmost",
+        }
+        with mock.patch.object(analyze, "print_header"), mock.patch("sys.stdout", output):
+            analyze.analyze_anomalies([event])
+
+        rendered = output.getvalue()
+        self.assertIn("Logitech G HUB Agent (com.logi.ghub.agent)", rendered)
+        self.assertIn("[via poll]", rendered)
+        self.assertNotIn("? (?)", rendered)
+
     def test_follow_handles_write_rotation_and_replacement_without_spin(self):
         with tempfile.TemporaryDirectory() as tmp:
             log_dir = Path(tmp)
