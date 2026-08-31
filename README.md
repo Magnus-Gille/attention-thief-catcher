@@ -103,7 +103,18 @@ python3 Scripts/analyze.py --last 2h
 
 # Events around a specific timestamp (±30s)
 python3 Scripts/analyze.py --around "2026-02-16T12:00:00"
+
+# Follow new events in real time (macOS)
+python3 Scripts/analyze.py --follow
 ```
+
+`--follow` tails the current log files with macOS `kqueue`, including files
+created or replaced during log rotation and daemon restart. Complete NDJSON
+events are printed as they arrive; partial lines wait for their terminating
+newline. Existing log history is not replayed, and output is flushed promptly
+for live terminal use. Anomaly events receive a visible marker and terminal
+color when stdout is a TTY; redirected output remains plain text. Use
+`--follow --anomalies` to show only anomaly events.
 
 The analyzer generates:
 - **Anomaly report** — all flagged events grouped by type
