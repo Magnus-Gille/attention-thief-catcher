@@ -43,6 +43,7 @@ Python 3 log analysis. Modes:
 - `--anomalies` — anomalies only
 - `--last 2h` — time window filter
 - `--around "ISO8601"` — events ±30s around timestamp
+- `--follow` — real-time macOS `kqueue` tail, including rotation/restart
 
 ## Build status
 - Swift code builds clean with `swift build -c release` (verified 2026-08-31)
